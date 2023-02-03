@@ -40,22 +40,19 @@ class HTTPClient(object):
     def parse_url_and_connect(self, url):
         if not url.startswith("http://"):
             url = "http://" + url
-
-        if not hasattr(self, 'parsed_url'):
-            self.parsed_url = urllib.parse.urlparse(url, scheme='http')
+        self.parsed_url = urllib.parse.urlparse(url, scheme='http')
 
         port = 80
         if ( self.parsed_url.port != None ):
             port = self.parsed_url.port
-        if not hasattr(self, 'socket'):
+        try:
+            self.connect(self.parsed_url.hostname, port)
+        except:
             try:
+                port = 8080
                 self.connect(self.parsed_url.hostname, port)
             except:
-                try:
-                    port = 8080
-                    self.connect(self.parsed_url.hostname, port)
-                except:
-                    return HTTPResponse(-1, "Cannot connect to {}".format(url))
+                return HTTPResponse(-1, "Cannot connect to {}".format(url))
         return None
 
     def connect(self, host, port):
@@ -123,12 +120,21 @@ class HTTPClient(object):
             path = "/"
 
         #Join args
+        query_string = ""
+        if args:
+            query_string = "?"
+            arg_strings = []
+            for i in args.keys():
+                arg_strings.append("=".join((i, args[i])))
+            query_string += "&".join(arg_strings)
+            
         #Append args to path
         
-        request = "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n".format(path, self.parsed_url.netloc)
+        request = "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n".format(path + query_string, self.parsed_url.netloc)
         self.sendall(request)
         data = self.recvall(self.socket).strip()
         self.close()
+        print(data)
         code = self.get_code(data)
         headers = self.get_headers(data)
         body = self.get_body(data)
@@ -146,9 +152,6 @@ class HTTPClient(object):
         return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):
-        conn_response = self.parse_url_and_connect(url)
-        if(conn_response == -1):
-            return conn_response
 
         if (command == "POST"):
             return self.POST( url, args )
