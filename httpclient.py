@@ -134,7 +134,6 @@ class HTTPClient(object):
         self.sendall(request)
         data = self.recvall(self.socket).strip()
         self.close()
-        print(data)
         code = self.get_code(data)
         headers = self.get_headers(data)
         body = self.get_body(data)
@@ -145,10 +144,24 @@ class HTTPClient(object):
         if(conn_response == -1):
             return conn_response
 
-        request = "POST {} HTTP/1.1\r\nHost: {}\r\nContent-Type: {}\r\n"
+        query_string = ""
+        if args:
+            arg_strings = []
+            for i in args.keys():
+                arg_strings.append("=".join((i, args[i])))
+            query_string += "&".join(arg_strings)
+
+        path = self.parsed_url.path
+        if not path:
+            path = "/"
+        request = "POST {} HTTP/1.1\r\nHost: {}\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: {}\r\n\r\n{}".format(path, self.parsed_url.netloc, len(query_string), query_string)
         
-        code = 500
-        body = ""
+        self.sendall(request)
+        data = self.recvall(self.socket).strip()
+        self.close()
+        code = self.get_code(data)
+        headers = self.get_headers(data)
+        body = self.get_body(data)
         return HTTPResponse(code, body)
 
     def command(self, url, command="GET", args=None):
