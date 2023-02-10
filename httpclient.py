@@ -119,21 +119,17 @@ class HTTPClient(object):
         if not path:
             path = "/"
 
-        #Join args
         query_string = ""
         if args:
-            query_string = "?"
-            arg_strings = []
-            for i in args.keys():
-                arg_strings.append("=".join((i, args[i])))
-            query_string += "&".join(arg_strings)
+            urllib.parse.urlencode(args)
             
-        #Append args to path
-        
         request = "GET {} HTTP/1.1\r\nHost: {}\r\nConnection: close\r\n\r\n".format(path + query_string, self.parsed_url.netloc)
+
         self.sendall(request)
         data = self.recvall(self.socket).strip()
         self.close()
+        
+        #Parse response data
         code = self.get_code(data)
         headers = self.get_headers(data)
         body = self.get_body(data)
@@ -146,19 +142,19 @@ class HTTPClient(object):
 
         query_string = ""
         if args:
-            arg_strings = []
-            for i in args.keys():
-                arg_strings.append("=".join((i, args[i])))
-            query_string += "&".join(arg_strings)
+            query_string = urllib.parse.urlencode(args)
 
         path = self.parsed_url.path
         if not path:
             path = "/"
+
         request = "POST {} HTTP/1.1\r\nHost: {}\r\nContent-Type: application/x-www-form-urlencoded\r\nContent-Length: {}\r\n\r\n{}".format(path, self.parsed_url.netloc, len(query_string), query_string)
         
         self.sendall(request)
         data = self.recvall(self.socket).strip()
         self.close()
+
+        #Parse response data
         code = self.get_code(data)
         headers = self.get_headers(data)
         body = self.get_body(data)
